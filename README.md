@@ -132,4 +132,4 @@ Result: ESC press, TAB press, ESC release, TAB release — both combos fire corr
 
 ## License
 
-MIT
+GPLv3
