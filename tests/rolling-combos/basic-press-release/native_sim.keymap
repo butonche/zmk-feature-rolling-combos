@@ -1,0 +1,43 @@
+/*
+ * Test: basic-press-release
+ *
+ * A standard combo (positions 0+1 → X).  Press both keys within the timeout
+ * window, then release.  Verifies baseline combo detection works.
+ *
+ * Sequence: press(0, 0ms), press(1, 10ms), release(0, 200ms), release(1, 10ms)
+ * Expected: press X, release X
+ */
+
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    rolling_combos {
+        compatible = "zmk,rolling-combos";
+        combo_x {
+            timeout-ms = <50>;
+            key-positions = <0 1>;
+            bindings = <&kp X>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+        default_layer {
+            bindings = <
+                &kp A &kp B
+                &kp C &kp D
+            >;
+        };
+    };
+};
+
+&kscan {
+    events = <
+        ZMK_MOCK_PRESS(0, 0, 0)
+        ZMK_MOCK_PRESS(0, 1, 10)
+        ZMK_MOCK_RELEASE(0, 0, 200)
+        ZMK_MOCK_RELEASE(0, 1, 10)
+    >;
+};

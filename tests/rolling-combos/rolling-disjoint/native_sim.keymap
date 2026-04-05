@@ -1,0 +1,61 @@
+/*
+ * Test: rolling-disjoint
+ *
+ * Two combos with disjoint key positions:
+ *   combo_x: positions <0 1> → X
+ *   combo_y: positions <2 3> → Y
+ *
+ * Press combo_x keys, then press combo_y keys before releasing combo_x.
+ * Both combos should fire independently.
+ *
+ * Sequence:
+ *   press(0, 0ms), press(1, 10ms),       -- combo_x activates
+ *   press(2, 10ms), press(3, 10ms),       -- combo_y activates (rolling)
+ *   release(0, 200ms), release(1, 10ms),  -- combo_x releases
+ *   release(2, 10ms), release(3, 10ms)    -- combo_y releases
+ *
+ * Expected: press X, press Y, release X, release Y
+ */
+
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    rolling_combos {
+        compatible = "zmk,rolling-combos";
+        combo_x {
+            timeout-ms = <50>;
+            key-positions = <0 1>;
+            bindings = <&kp X>;
+        };
+        combo_y {
+            timeout-ms = <50>;
+            key-positions = <2 3>;
+            bindings = <&kp Y>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+        default_layer {
+            bindings = <
+                &kp A &kp B
+                &kp C &kp D
+            >;
+        };
+    };
+};
+
+&kscan {
+    events = <
+        ZMK_MOCK_PRESS(0, 0, 0)
+        ZMK_MOCK_PRESS(0, 1, 10)
+        ZMK_MOCK_PRESS(1, 0, 10)
+        ZMK_MOCK_PRESS(1, 1, 10)
+        ZMK_MOCK_RELEASE(0, 0, 200)
+        ZMK_MOCK_RELEASE(0, 1, 10)
+        ZMK_MOCK_RELEASE(1, 0, 10)
+        ZMK_MOCK_RELEASE(1, 1, 10)
+    >;
+};

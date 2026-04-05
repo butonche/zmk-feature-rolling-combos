@@ -1,0 +1,70 @@
+/*
+ * Test: context-exhaustion
+ *
+ * With only 2 detection context slots, try to detect 3 combos simultaneously.
+ * The third key that would start a new combo should fall through as an
+ * individual key press.
+ *
+ * combo_x: positions <0 1> → X  (needs key 1 which never comes)
+ * combo_y: positions <2 3> → Y  (needs key 3 which never comes)
+ *
+ * Press key 0 (starts context 1 for combo_x),
+ * press key 2 (starts context 2 for combo_y),
+ * press key 3 within timeout (feeds context 2, combo_y activates),
+ * press key 1 within timeout (feeds context 1, combo_x activates),
+ * release all.
+ *
+ * Both combos should still fire since each context gets its second key.
+ * This tests that contexts are allocated and used correctly under load.
+ *
+ * Sequence:
+ *   press(0, 0ms), press(2, 5ms), press(3, 5ms), press(1, 5ms),
+ *   release(0, 200ms), release(1, 10ms), release(2, 10ms), release(3, 10ms)
+ *
+ * Expected: press Y, press X, release X, release Y
+ *   (Y first because combo_y {2,3} completes before combo_x {0,1} — key 3
+ *    arrives before key 1 in the sequence)
+ */
+
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    rolling_combos {
+        compatible = "zmk,rolling-combos";
+        combo_x {
+            timeout-ms = <50>;
+            key-positions = <0 1>;
+            bindings = <&kp X>;
+        };
+        combo_y {
+            timeout-ms = <50>;
+            key-positions = <2 3>;
+            bindings = <&kp Y>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+        default_layer {
+            bindings = <
+                &kp A &kp B
+                &kp C &kp D
+            >;
+        };
+    };
+};
+
+&kscan {
+    events = <
+        ZMK_MOCK_PRESS(0, 0, 0)
+        ZMK_MOCK_PRESS(1, 0, 5)
+        ZMK_MOCK_PRESS(1, 1, 5)
+        ZMK_MOCK_PRESS(0, 1, 5)
+        ZMK_MOCK_RELEASE(0, 0, 200)
+        ZMK_MOCK_RELEASE(0, 1, 10)
+        ZMK_MOCK_RELEASE(1, 0, 10)
+        ZMK_MOCK_RELEASE(1, 1, 10)
+    >;
+};

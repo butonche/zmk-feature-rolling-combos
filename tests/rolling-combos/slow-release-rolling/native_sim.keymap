@@ -1,0 +1,63 @@
+/*
+ * Test: slow-release-rolling
+ *
+ * combo_x: positions <0 1> → X (slow-release)
+ * combo_y: positions <2 3> → Y (normal release)
+ *
+ * With slow-release, combo_x should NOT release until both keys 0 AND 1
+ * are released.  Normal release combo_y releases on first key-up.
+ *
+ * Sequence:
+ *   press(0, 0ms), press(1, 10ms),       -- combo_x activates (slow-release)
+ *   press(2, 10ms), press(3, 10ms),       -- combo_y activates
+ *   release(2, 200ms),                    -- combo_y releases (normal: first key up)
+ *   release(0, 10ms),                     -- combo_x still held (slow: not all released)
+ *   release(3, 10ms),                     -- combo_y fully deactivated
+ *   release(1, 10ms)                      -- combo_x now releases (all keys up)
+ *
+ * Expected: press X, press Y, release Y, release X
+ */
+
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    rolling_combos {
+        compatible = "zmk,rolling-combos";
+        combo_x {
+            timeout-ms = <50>;
+            key-positions = <0 1>;
+            bindings = <&kp X>;
+            slow-release;
+        };
+        combo_y {
+            timeout-ms = <50>;
+            key-positions = <2 3>;
+            bindings = <&kp Y>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+        default_layer {
+            bindings = <
+                &kp A &kp B
+                &kp C &kp D
+            >;
+        };
+    };
+};
+
+&kscan {
+    events = <
+        ZMK_MOCK_PRESS(0, 0, 0)
+        ZMK_MOCK_PRESS(0, 1, 10)
+        ZMK_MOCK_PRESS(1, 0, 10)
+        ZMK_MOCK_PRESS(1, 1, 10)
+        ZMK_MOCK_RELEASE(1, 0, 200)
+        ZMK_MOCK_RELEASE(0, 0, 10)
+        ZMK_MOCK_RELEASE(1, 1, 10)
+        ZMK_MOCK_RELEASE(0, 1, 10)
+    >;
+};

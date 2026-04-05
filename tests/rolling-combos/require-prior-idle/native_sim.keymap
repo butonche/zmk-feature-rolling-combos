@@ -1,0 +1,53 @@
+/*
+ * Test: require-prior-idle
+ *
+ * combo_x: positions <0 1> → X, require-prior-idle-ms = <150>
+ *
+ * First, type key 2 (C) to set last_tapped_timestamp.
+ * Then quickly (within 150ms) press 0+1.  The combo should NOT fire because
+ * the prior idle requirement is not met.  Keys A and B should appear instead.
+ *
+ * Sequence:
+ *   press(2, 0ms), release(2, 50ms),     -- type C, sets last_tapped
+ *   press(0, 30ms), press(1, 10ms),      -- 80ms since C press < 150ms idle
+ *   release(0, 200ms), release(1, 10ms)  -- combo NOT fired, individual keys
+ *
+ * Expected: press C, release C, press A, press B, release A, release B
+ */
+
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    rolling_combos {
+        compatible = "zmk,rolling-combos";
+        combo_x {
+            timeout-ms = <50>;
+            key-positions = <0 1>;
+            bindings = <&kp X>;
+            require-prior-idle-ms = <150>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+        default_layer {
+            bindings = <
+                &kp A &kp B
+                &kp C &kp D
+            >;
+        };
+    };
+};
+
+&kscan {
+    events = <
+        ZMK_MOCK_PRESS(1, 0, 0)
+        ZMK_MOCK_RELEASE(1, 0, 50)
+        ZMK_MOCK_PRESS(0, 0, 30)
+        ZMK_MOCK_PRESS(0, 1, 10)
+        ZMK_MOCK_RELEASE(0, 0, 200)
+        ZMK_MOCK_RELEASE(0, 1, 10)
+    >;
+};
