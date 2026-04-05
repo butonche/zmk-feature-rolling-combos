@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE="docker.io/zmkfirmware/zmk-dev-x86_64:4.1"
+IMAGE="docker.io/zmkfirmware/zmk-dev-x86_64:3.5"
 MODULE_DIR="$(cd "$(dirname "$0")" && pwd)"
 TESTS_DIR="$MODULE_DIR/tests/rolling-combos"
 
