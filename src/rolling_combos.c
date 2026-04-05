@@ -12,6 +12,8 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
 #include <zmk/events/keycode_state_changed.h>
+#include <zmk/events/activity_state_changed.h>
+#include <zmk/activity.h>
 #include <zmk/hid.h>
 #include <zmk/matrix.h>
 #include <zmk/keymap.h>
@@ -850,6 +852,19 @@ static int position_state_changed_listener(const zmk_event_t *ev) {
     }
 
     if (data->state) {
+        /*
+         * Notify the activity system on key-down.  This module's event
+         * subscription may be ordered before the activity listener in the
+         * linker section, so captured events never reach it — leaving idle
+         * and display-blank timers stale.  Raising an explicit ACTIVE event
+         * ensures the display unblanks immediately.  The activity module's
+         * internal timestamp gets updated when the combo resolves and
+         * captured keys are released/re-raised through the event pipeline.
+         */
+        if (zmk_activity_get_state() != ZMK_ACTIVITY_ACTIVE) {
+            raise_zmk_activity_state_changed(
+                (struct zmk_activity_state_changed){.state = ZMK_ACTIVITY_ACTIVE});
+        }
         return position_state_down(ev, data);
     } else {
         return position_state_up(ev, data);
