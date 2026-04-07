@@ -21,8 +21,8 @@ manifest:
   remotes:
     - name: zmkfirmware
       url-base: https://github.com/zmkfirmware
-    - name: your-username
-      url-base: https://github.com/your-username
+    - name: butonche
+      url-base: https://github.com/butonche
   projects:
     - name: zmk
       remote: zmkfirmware
