@@ -12,13 +12,32 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
 #include <zmk/events/keycode_state_changed.h>
-#include <zmk/events/activity_state_changed.h>
 #include <zmk/hid.h>
 #include <zmk/matrix.h>
 #include <zmk/keymap.h>
 #include <zmk/virtual_key_position.h>
+#include <zmk/events/sensor_event.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+
+/*
+ * Asynchronous activity poke.  This module's event subscription is linked
+ * before the activity listener (external module vs app code), so captured
+ * position events never reach activity — leaving the idle timer stale.
+ *
+ * We submit a deferred work item that raises a zmk_sensor_event.  The
+ * activity listener subscribes to sensor events and calls note_activity(),
+ * resetting the idle timestamp.  No sensor behaviors are configured on
+ * keyboards without encoders, so the event is otherwise harmless.  Using
+ * a work item avoids re-entrancy with the event dispatch loop.
+ */
+static void activity_poke_work_handler(struct k_work *work) {
+    raise_zmk_sensor_event((struct zmk_sensor_event){
+        .sensor_index = UINT8_MAX,
+        .channel_data_size = 0,
+        .timestamp = k_uptime_get()});
+}
+static K_WORK_DEFINE(activity_poke_work, activity_poke_work_handler);
 
 #if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
@@ -851,16 +870,7 @@ static int position_state_changed_listener(const zmk_event_t *ev) {
     }
 
     if (data->state) {
-        /*
-         * Notify the activity system on every key-down.  This module's event
-         * subscription may be ordered before the activity listener in the
-         * linker section, so captured events never reach it — leaving idle
-         * and display-blank timers stale.  Raising an explicit ACTIVE event
-         * ensures the display unblanks and the idle timer resets.
-         */
-        LOG_DBG("rolling_combos: raising activity ACTIVE for position %d", data->position);
-        raise_zmk_activity_state_changed(
-            (struct zmk_activity_state_changed){.state = ZMK_ACTIVITY_ACTIVE});
+        k_work_submit(&activity_poke_work);
         return position_state_down(ev, data);
     } else {
         return position_state_up(ev, data);
