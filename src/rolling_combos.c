@@ -12,13 +12,15 @@
 #include <zmk/event_manager.h>
 #include <zmk/events/position_state_changed.h>
 #include <zmk/events/keycode_state_changed.h>
+#include <zmk/events/sensor_event.h>
 #include <zmk/hid.h>
 #include <zmk/matrix.h>
 #include <zmk/keymap.h>
 #include <zmk/virtual_key_position.h>
-#include <zmk/events/sensor_event.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
+
+#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
 /*
  * Asynchronous activity poke.  This module's event subscription is linked
@@ -38,8 +40,6 @@ static void activity_poke_work_handler(struct k_work *work) {
         .timestamp = k_uptime_get()});
 }
 static K_WORK_DEFINE(activity_poke_work, activity_poke_work_handler);
-
-#if DT_HAS_COMPAT_STATUS_OKAY(DT_DRV_COMPAT)
 
 /*
  * ─── Compile-time combo extraction from devicetree ───────────────────────────
