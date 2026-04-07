@@ -1,0 +1,71 @@
+/*
+ * Test: idle-wake
+ *
+ * Verifies that the rolling-combos module's activity poke keeps the
+ * idle timer alive across multiple idle/wake cycles.  The module raises
+ * a synthetic sensor event on every key-down (via a deferred work item)
+ * so that the activity listener calls note_activity() even though
+ * position events are captured before reaching it.
+ *
+ * Uses CONFIG_ZMK_IDLE_TIMEOUT=500 (via native_posix_64.conf).
+ *
+ * Sequence:
+ *   1. Press combo (0+1 → X)
+ *   2. Wait 1000ms — idle fires at 500ms, combo works in round 2
+ *   3. Press combo (0+1 → X) again
+ *   4. Wait 1000ms — idle fires at 500ms again
+ *   5. Dummy key (D) keeps process alive through second idle gap
+ *
+ * Expected output: both combos produce X, dummy produces D.
+ * If the activity poke fails, the idle timer never resets after the
+ * first blank and the second combo round would still work but the
+ * display would never blank again.
+ */
+
+#include <dt-bindings/zmk/keys.h>
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/kscan_mock.h>
+
+/ {
+    rolling_combos {
+        compatible = "zmk,rolling-combos";
+        combo_x {
+            timeout-ms = <200>;
+            key-positions = <0 1>;
+            bindings = <&kp X>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+        default_layer {
+            bindings = <
+                &kp A &kp B
+                &kp C &kp D
+            >;
+        };
+    };
+};
+
+&kscan {
+    exit-after;
+    events = <
+        /* Round 1: press combo */
+        ZMK_MOCK_PRESS(0, 0, 0)
+        ZMK_MOCK_PRESS(0, 1, 10)
+        ZMK_MOCK_RELEASE(0, 0, 200)
+        /* 1000ms gap after this release: idle timeout (500ms) fires in between */
+        ZMK_MOCK_RELEASE(0, 1, 1000)
+        /* Round 2: press combo again after idle */
+        ZMK_MOCK_PRESS(0, 0, 10)
+        ZMK_MOCK_PRESS(0, 1, 10)
+        ZMK_MOCK_RELEASE(0, 0, 200)
+        /* 1000ms gap after this release: second idle timeout fires at +500ms.
+         * Dummy press at position 3 (not in any combo) keeps process alive
+         * through the idle gap. Another 1000ms after dummy release lets us
+         * observe a third IDLE proving the cycle repeats. */
+        ZMK_MOCK_RELEASE(0, 1, 1000)
+        ZMK_MOCK_PRESS(1, 1, 0)
+        ZMK_MOCK_RELEASE(1, 1, 1000)
+    >;
+};
