@@ -13,7 +13,7 @@ docker run --rm \
 set -euo pipefail
 
 echo "=== Cloning ZMK ==="
-git clone --depth 1 --quiet https://github.com/zmkfirmware/zmk.git /workspace/zmk
+git clone --depth 1 --branch v0.3-branch --quiet https://github.com/zmkfirmware/zmk.git /workspace/zmk
 cd /workspace/zmk
 west init -l app 2>&1 | tail -1
 echo "=== Running west update (this takes a while) ==="
@@ -30,13 +30,13 @@ for test_dir in /module/tests/rolling-combos/*/; do
     test_name="$(basename "$test_dir")"
 
     # Skip non-test entries (e.g. shared dtsi files)
-    if [ ! -f "$test_dir/native_sim.keymap" ]; then
+    if [ ! -f "$test_dir/native_posix_64.keymap" ]; then
         continue
     fi
 
     echo ""
     echo "=== Building test: $test_name ==="
-    if ! west build -p always -b native_sim//zmk_test_mock -d "/workspace/build/$test_name" app -- \
+    if ! west build -p always -b native_posix_64 -d "/workspace/build/$test_name" app -- \
         -DZMK_CONFIG="$test_dir" \
         -DCONFIG_ASSERT=y \
         -DZMK_EXTRA_MODULES=/module 2>&1; then
